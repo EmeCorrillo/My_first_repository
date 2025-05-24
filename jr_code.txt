@@ -1,0 +1,79 @@
+import edu.ucdavis.jr.JR;
+import java.util.LinkedList;
+
+public class exercise_18 {
+    private static final int max_product = 20;
+    private static LinkedList<Integer> products_list;
+
+    private static process Consumer{
+        // await(can_consume) 
+        // signal(can_produce)
+        int index_list = 20;
+
+        while (!products_list.isEmpty()) {
+            products_list.remove(index_list);
+            index_list -= 1;
+            System.out.println("Consumer in products list... products in list [" + index_list + "]");
+        }
+    }
+
+    private static process Producer{
+        // await (can_produce)
+        // signal(can_consume)
+        int index_list = 0;
+
+        while (products_list.getLast() != max_product) {
+            index_list += 1;
+            products_list.addLast(index_list);
+            System.out.println("Producer in products list... products in list [" + index_list + "]");
+        }
+    }
+
+    public static void main(String[] args) {
+        // Inicializa mercaderia con valores de parada (-1)
+            // sem can_produce(20);
+            // sem can_consume(0);
+            // Lanza los procesos
+        products_list = new LinkedList<Integer>();
+        exercise_18 prueba = new exercise_18();
+
+        try {
+			JR.registerQuiescenceAction(end);
+		} catch (edu.ucdavis.jr.QuiescenceRegistrationException e) {
+			System.out.println("Errores varios...");
+            //TODO: handle exception
+		}
+    }
+    private static op void end(){
+        System.out.println("This is the end...");
+    }
+}
+
+--------------------------------------------------------------------
+error 1.0
+root@0a37ad62b4be:/jr_code/Example/exercise_18# jr exercise_18
+Note: jrGen/exercise_18.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+JR runtime error in "Thread-4" edu.ucdavis.jr.jrRuntimeError: Unhandled exception: java.lang.NullPointerException at exercise_18.ProducervoidTovoid(exercise_18.java:370) (details below)
+JR runtime error in "Thread-3" edu.ucdavis.jr.jrRuntimeError: Unhandled exception: java.lang.NullPointerException at exercise_18.ConsumervoidTovoid(exercise_18.java:172) (details below)
+Exception in thread "Thread-4" edu.ucdavis.jr.jrRuntimeError: Unhandled exception: java.lang.NullPointerException at exercise_18.ProducervoidTovoid(exercise_18.java:370)
+	at exercise_18.ProducervoidTovoid(exercise_18.java:410)
+	at exercise_18.access$100(exercise_18.java:13)
+	at exercise_18$ProcOp_voidTovoid_implProducer$sendThread.run(exercise_18.java:266)
+	at java.lang.Thread.run(Thread.java:748)
+java.rmi.NoSuchObjectException: object not exported
+	at sun.rmi.transport.ObjectTable.unexportObject(ObjectTable.java:153)
+	at java.rmi.server.UnicastRemoteObject.unexportObject(UnicastRemoteObject.java:370)
+	at edu.ucdavis.jr.jrx.jrvm.unregisterAllRemote(jrvm.java:511)
+	at edu.ucdavis.jr.jrRuntimeError.<init>(jrRuntimeError.java:37)
+	at exercise_18.ConsumervoidTovoid(exercise_18.java:212)
+	at exercise_18.access$000(exercise_18.java:13)
+	at exercise_18$ProcOp_voidTovoid_implConsumer$sendThread.run(exercise_18.java:68)
+	at java.lang.Thread.run(Thread.java:748)
+Exception in thread "Thread-3" edu.ucdavis.jr.jrRuntimeError: Unhandled exception: java.lang.NullPointerException at exercise_18.ConsumervoidTovoid(exercise_18.java:172)
+	at exercise_18.ConsumervoidTovoid(exercise_18.java:212)
+	at exercise_18.access$000(exercise_18.java:13)
+	at exercise_18$ProcOp_voidTovoid_implConsumer$sendThread.run(exercise_18.java:68)
+	at java.lang.Thread.run(Thread.java:748)
+Contact with a VM on 0a37ad62b4be has been lost ... exiting
+
