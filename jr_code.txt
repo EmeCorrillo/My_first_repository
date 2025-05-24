@@ -64,3 +64,15 @@ Exception in thread "Thread-3" edu.ucdavis.jr.jrRuntimeError: Unhandled exceptio
 	at java.lang.Thread.run(Thread.java:748)
 Contact with a VM on 0a37ad62b4be has been lost ... exiting
 
+error 2.0
+root@0a37ad62b4be:/jr_code/Example/exercise_18# jr exercise_18
+exercise_18.jr:7: illegal start of type
+    private static Queue<Integer> products_list = new LinkedList<>();
+                                                                 ^
+exercise_18.jr:7: > expected
+    private static Queue<Integer> products_list = new LinkedList<>();
+                                                                    ^
+Not generating any jrGen files due to errors.
+2 errors
+
+
