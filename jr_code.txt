@@ -1,49 +1,36 @@
 import edu.ucdavis.jr.JR;
 import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Random;
 
 public class exercise_18 {
-    private static final int max_product = 20;
-    private static LinkedList<Integer> products_list;
+    private static Queue<Integer> products_list = LinkedList<>();
+    private static int index_list = 50;
 
     private static process Consumer{
-        // await(can_consume) 
-        // signal(can_produce)
-        int index_list = 20;
-
         while (!products_list.isEmpty()) {
-            products_list.remove(index_list);
-            index_list -= 1;
-            System.out.println("Consumer in products list... products in list [" + index_list + "]");
+            System.out.println("Consumer remove in products list... Product [" + products_list.poll()+"]");
         }
     }
 
     private static process Producer{
-        // await (can_produce)
-        // signal(can_consume)
-        int index_list = 0;
+        Random random = new Random();
 
-        while (products_list.getLast() != max_product) {
-            index_list += 1;
-            products_list.addLast(index_list);
-            System.out.println("Producer in products list... products in list [" + index_list + "]");
+        for (int i = 1; i <= index_list; i++) {
+            int random_int = random.nextInt(100) + 1;
+            products_list.add(random_int);
+            System.out.println("Producer add in products list... Product [" + products_list.peek() + "]");
         }
     }
 
     public static void main(String[] args) {
-        // Inicializa mercaderia con valores de parada (-1)
-            // sem can_produce(20);
-            // sem can_consume(0);
-            // Lanza los procesos
-        products_list = new LinkedList<Integer>();
-        exercise_18 prueba = new exercise_18();
-
         try {
 			JR.registerQuiescenceAction(end);
 		} catch (edu.ucdavis.jr.QuiescenceRegistrationException e) {
-			System.out.println("Errores varios...");
-            //TODO: handle exception
+			e.printStackTrace();
 		}
     }
+
     private static op void end(){
         System.out.println("This is the end...");
     }
