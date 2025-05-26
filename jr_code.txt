@@ -321,4 +321,161 @@ public class SleepingBarber {
     }
 }
 
+---------------------------------------------------------------------------------------------------------------------------
+PROGRAM FOR EXERCISE 11
+import edu.ucdavis.jr.JR;
+import java.util.Random;
+
+public class PizzaShop {
+    // --- Constantes ---
+    private static final int PIZZAS_TO_MAKE = 20; // Número total de pizzas para la jornada
+    private static final int PAUSE_TIME_MS = 100; // Tiempo de pausa para simulación
+
+    // --- Semáforos ---
+    private static sem chef_ready = 1;          // 1 si el chef puede empezar una nueva pizza, 0 si debe esperar
+    private static sem ingredient_salsa = 0;    // 1 si la pizza necesita salsa, 0 si no
+    private static sem ingredient_queso = 0;    // 1 si la pizza necesita queso, 0 si no
+    private static sem ingredient_morrones = 0; // 1 si la pizza necesita morrones, 0 si no
+    private static sem mutex_pizza_count = 1;   // Mutex para proteger el contador de pizzas
+
+    // --- Variable de conteo ---
+    private static int total_pizzas_made = 0;
+
+    // --- Método de pausa ---
+    private static op void pause(int time) {
+        try {
+            Thread.sleep(time);
+        } catch (java.lang.Exception e) {
+            // Ignorar interrupciones en la simulación
+        }
+    }
+
+    // --- Proceso Chef ---
+    private static process Chef() {
+        Random random = new Random();
+        System.out.println("Chef: Ready to make pizzas!");
+
+        for (int i = 0; i < PIZZAS_TO_MAKE; i++) {
+            P(chef_ready); // Espera a que la pizza anterior sea completada
+
+            int ingredient1 = random.nextInt(3); // 0=salsa, 1=queso, 2=morrones
+            int ingredient2;
+            do {
+                ingredient2 = random.nextInt(3);
+            } while (ingredient2 == ingredient1); // Asegura dos ingredientes distintos
+
+            String ingredientsOnPizza = "";
+            String missingIngredient = "";
+
+            // Determinar los ingredientes y el faltante
+            if ((ingredient1 == 0 && ingredient2 == 1) || (ingredient1 == 1 && ingredient2 == 0)) { // Salsa y Queso
+                missingIngredient = "Morrones";
+                V(ingredient_morrones); // Señal al ayudante de morrones
+            } else if ((ingredient1 == 0 && ingredient2 == 2) || (ingredient1 == 2 && ingredient1 == 0)) { // Salsa y Morrones
+                missingIngredient = "Queso";
+                V(ingredient_queso); // Señal al ayudante de queso
+            } else { // Queso y Morrones
+                missingIngredient = "Salsa";
+                V(ingredient_salsa); // Señal al ayudante de salsa
+            }
+
+            System.out.println("Chef: Pizza with " + (ingredient1 == 0 ? "Salsa" : (ingredient1 == 1 ? "Queso" : "Morrones")) +
+                                " and " + (ingredient2 == 0 ? "Salsa" : (ingredient2 == 1 ? "Queso" : "Morrones")) +
+                                ". Missing: " + missingIngredient + ".");
+            call pause(PAUSE_TIME_MS); // Simular tiempo de preparación inicial
+        }
+        System.out.println("Chef: All " + PIZZAS_TO_MAKE + " pizzas started. Now resting.");
+    }
+
+    // --- Proceso Ayudante Salsa ---
+    private static process HelperSalsa() {
+        System.out.println("Helper Salsa: Waiting for pizzas missing salsa.");
+        while (true) {
+            P(ingredient_salsa); // Espera por una pizza que necesite salsa
+            System.out.println("Helper Salsa: Adding salsa to pizza.");
+            call pause(PAUSE_TIME_MS); // Simular tiempo de completado
+
+            // Incrementar contador de pizzas hechas
+            P(mutex_pizza_count);
+            total_pizzas_made++;
+            System.out.println("Helper Salsa: Pizza completed! Total pizzas: " + total_pizzas_made);
+            if (total_pizzas_made == PIZZAS_TO_MAKE) {
+                V(chef_ready); // Asegura que el chef pueda terminar si es la última pizza
+                V(ingredient_queso); // Desbloquea otros ayudantes para evitar interbloqueo al final
+                V(ingredient_morrones);
+                return; // Terminar el proceso
+            }
+            V(mutex_pizza_count);
+
+            V(chef_ready); // Señala al Chef que la pizza ha sido completada, puede iniciar la siguiente
+        }
+    }
+
+    // --- Proceso Ayudante Queso ---
+    private static process HelperQueso() {
+        System.out.println("Helper Queso: Waiting for pizzas missing queso.");
+        while (true) {
+            P(ingredient_queso); // Espera por una pizza que necesite queso
+            System.out.println("Helper Queso: Adding queso to pizza.");
+            call pause(PAUSE_TIME_MS); // Simular tiempo de completado
+
+            P(mutex_pizza_count);
+            total_pizzas_made++;
+            System.out.println("Helper Queso: Pizza completed! Total pizzas: " + total_pizzas_made);
+            if (total_pizzas_made == PIZZAS_TO_MAKE) {
+                V(chef_ready);
+                V(ingredient_salsa);
+                V(ingredient_morrones);
+                return;
+            }
+            V(mutex_pizza_count);
+
+            V(chef_ready);
+        }
+    }
+
+    // --- Proceso Ayudante Morrones ---
+    private static process HelperMorrones() {
+        System.out.println("Helper Morrones: Waiting for pizzas missing morrones.");
+        while (true) {
+            P(ingredient_morrones); // Espera por una pizza que necesite morrones
+            System.out.println("Helper Morrones: Adding morrones to pizza.");
+            call pause(PAUSE_TIME_MS); // Simular tiempo de completado
+
+            P(mutex_pizza_count);
+            total_pizzas_made++;
+            System.out.println("Helper Morrones: Pizza completed! Total pizzas: " + total_pizzas_made);
+            if (total_pizzas_made == PIZZAS_TO_MAKE) {
+                V(chef_ready);
+                V(ingredient_salsa);
+                V(ingredient_queso);
+                return;
+            }
+            V(mutex_pizza_count);
+
+            V(chef_ready);
+        }
+    }
+
+    // --- Main Method ---
+    public static void main(String[] args) {
+        new Chef();
+        new HelperSalsa();
+        new HelperQueso();
+        new HelperMorrones();
+
+        try {
+            JR.registerQuiescenceAction(end);
+        } catch (edu.ucdavis.jr.QuiescenceRegistrationException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // --- Acción de Quiescencia ---
+    private static op void end() {
+        System.out.println("\n--- End of Shift ---");
+        System.out.println("Total pizzas made: " + total_pizzas_made);
+        System.out.println("Pizza Shop simulation has ended.");
+    }
+}
 
