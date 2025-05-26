@@ -83,27 +83,53 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Random;
 
-public class exercise_18 {
+public class exercise_5c{
     private static Queue<Integer> products_list = new LinkedList<Integer>();
-    private static int index_list = 50;
+    //private static int index_list = 50;
+    private static sem deposited = 0;
+    private static sem recovered = 1;
+    private static final int N = 10; // Numbers of Producers
+    private static final int M = 10; // Numbers of Consumers
 
-    private static process Producer{
-        Random random = new Random();
+    private static op void pause(int time){
+        
+        try{
+                Thread.sleep(time);
+        }catch(java.lang.Exception e){}
 
-        for (int i = 1; i <= index_list; i++) {
-            int random_int = random.nextInt(100) + 1;
-            products_list.add(random_int);
-            System.out.println("Producer add in products list... Product [" + random_int + "]");
-        }
-        System.out.println("Producer finished adding " + index_list + " products... ");
     }
 
-    private static process Consumer{
-        while (!products_list.isEmpty()) {
+    private static process Producer( (int i = 0; i < N; i++) ){
+        Random random = new Random();
+
+        while(true) {
+            int random_int = random.nextInt(100) + 1;
+
+            // Wait - Wait for the product to be recovered
+            P(recovered);
+
+            products_list.add(random_int);
+            System.out.println("Producer add in products list... Product [" + random_int + "]");
+            call pause(800);
+
+            // Signal - Notify that it has been deposited
+            V(deposited);
+        }
+    }
+
+    private static process Consumer( (int j = 0; j < M; j++) ){
+        while(true) {
+            // Wait - Wait for the product to be deposited
+            P(deposited);
+
             int product = products_list.poll();
             System.out.println("Consumer remove in products list... Product [" + product +"]");
+
+            call pause(800);
+
+            // Signal - Notify that it has been recovered
+            V(recovered);
         }
-        System.out.println("Consumer finished, final list size: " + products_list.size());
     }
 
     public static void main(String[] args) {
@@ -149,5 +175,7 @@ public class exercise_8b{
 
     }
 }
+
+
 
 
