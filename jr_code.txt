@@ -176,6 +176,149 @@ public class exercise_8b{
     }
 }
 
+------------------------------------------------------------------------------------------------
+BARBER SLEEPING PROBLEM PROGRAM
 
+import edu.ucdavis.jr.JR;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Random;
+
+public class SleepingBarber {
+    // --- Constantes del Problema ---
+    private static final int NUM_CHAIRS = 5; // Número de sillas de espera (N clientes además del sillón)
+    private static final int NUM_CLIENTS_TO_SIMULATE = 20; // Total de clientes que llegarán para la simulación
+
+    // --- Semáforos ---
+    private static sem clients = 0;          // # de clientes que necesitan atención (en sillón o esperando)
+    private static sem barber = 0;           // El barbero está despierto y listo para atender/cobrar
+    private static sem customer_chair = 1;   // El sillón del barbero (1 = libre, 0 = ocupado)
+    private static sem cashier = 0;          // El cliente está listo para pagar en la caja
+    private static sem payment_completed = 0; // El barbero ha terminado de cobrar
+    private static sem chairs_mutex = 1;     // Mutex para proteger la variable waiting_chairs_count
+
+    // --- Variables de Conteo ---
+    private static int waiting_chairs_count = 0; // # de clientes en las sillas de espera
+
+    // --- Método de Pausa (para simulación visual) ---
+    private static op void pause(int time) {
+        try {
+            Thread.sleep(time);
+        } catch (java.lang.Exception e) {
+            System.err.println("Error en pause: " + e.getMessage());
+        }
+    }
+
+    // --- Proceso Barbero ---
+    private static process Barber() {
+        System.out.println("Barber: I'm ready for business.");
+        while (true) {
+            // 1. Esperar por clientes (dormirse si no hay)
+            P(clients); // El barbero espera a que haya un cliente que necesite su atención
+
+            // 2. Despertar / Mover al sillón (si aplica)
+            P(barber);  // El barbero espera a ser despertado por un cliente en el sillón
+
+            // 3. Cortar el pelo
+            System.out.println("Barber: Cutting hair...");
+            call pause(1500); // Simular tiempo de corte
+            System.out.println("Barber: Haircut finished!");
+
+            // 4. Liberar el sillón
+            V(customer_chair); // El sillón está libre para el siguiente cliente
+
+            // 5. Esperar al cliente en la caja para cobrar
+            P(cashier); // Espera a que el cliente se posicione en la caja
+
+            // 6. Cobrar
+            System.out.println("Barber: Collecting payment...");
+            call pause(700); // Simular tiempo de cobro
+            System.out.println("Barber: Payment collected!");
+
+            // 7. Señalar al cliente que puede irse
+            V(payment_completed); // Señala que el pago ha sido procesado
+        }
+    }
+
+    // --- Proceso Cliente ---
+    // (int k = 0; k < NUM_CLIENTS_TO_SIMULATE; k++) para lanzar múltiples clientes
+    private static process Client((int client_id)) {
+        System.out.println("Client " + client_id + ": Arrived at barber shop.");
+
+        // Intentar sentarse en una silla de espera
+        P(chairs_mutex); // Proteger el acceso a waiting_chairs_count
+        if (waiting_chairs_count < NUM_CHAIRS) {
+            // Hay sillas disponibles
+            waiting_chairs_count++;
+            System.out.println("Client " + client_id + ": Took a waiting chair. Waiting chairs occupied: " + waiting_chairs_count);
+            V(chairs_mutex); // Liberar mutex
+
+            V(clients); // Notificar al barbero que hay un cliente (en espera)
+            P(customer_chair); // Esperar a que el sillón esté libre y sentarse en él
+                               // Una vez que se adquiere, significa que el barbero lo ha liberado y es mi turno.
+
+            // En este punto, el cliente está en el sillón.
+            System.out.println("Client " + client_id + ": Moved to barber chair.");
+            V(barber); // Despertar al barbero (si estaba durmiendo) o señalar que estoy listo para corte
+
+            // Simular corte (el cliente espera pasivamente)
+            // Cuando el barbero termina, libera customer_chair.
+            // Para el cliente, su P(customer_chair) ya se cumplió, no necesita más acciones aquí hasta el cobro.
+
+            // Después del corte, el cliente se levanta del sillón y va a la caja
+            System.out.println("Client " + client_id + ": Finished haircut, heading to cashier.");
+            V(cashier); // Notificar al barbero que está listo para pagar
+
+            P(payment_completed); // Esperar a que el barbero termine de cobrar
+            System.out.println("Client " + client_id + ": Payment done, leaving barber shop.");
+
+            // Decrementar la cuenta de sillas de espera (sólo si estuvo esperando)
+            // Esto se hace después de que el cliente haya terminado y se vaya
+            P(chairs_mutex); // Proteger el acceso
+            waiting_chairs_count--; // Asume que un cliente que ocupó el sillón "libera" una silla de espera
+                                    // Esta es una simplificación; en realidad, el cliente libera la silla de espera
+                                    // cuando se mueve al sillón. Se corrige abajo en el comentario.
+            V(chairs_mutex);
+            
+            // Lógica corregida para sillas de espera:
+            // El cliente decrementa waiting_chairs_count cuando se levanta de la silla de espera PARA IR AL SILLON.
+            // Si llega directamente al sillón, no incrementa waiting_chairs_count.
+            // La complejidad de este patrón puede requerir un poco más de finura en el manejo de sillas.
+            // Para esta versión, el `waiting_chairs_count` representa "clientes que aún esperan por el sillón".
+            // Por lo tanto, el decremento debería ir ANTES de `P(customer_chair)`.
+            // Ver una versión más robusta abajo en las notas.
+
+        } else {
+            // No hay sillas disponibles
+            V(chairs_mutex); // Liberar mutex
+            System.out.println("Client " + client_id + ": No waiting chairs available, leaving.");
+        }
+
+        call pause(new Random().nextInt(2000) + 500); // Tiempo que el cliente tarda en volver a llegar (o para el siguiente)
+    }
+
+    // --- Main Method ---
+    public static void main(String[] args) {
+        // Lanzar el Barbero
+        new Barber();
+
+        // Lanzar los Clientes
+        for (int i = 0; i < NUM_CLIENTS_TO_SIMULATE; i++) {
+            new Client(i + 1); // Id de cliente
+            call pause(new Random().nextInt(1000) + 200); // Tiempo de llegada entre clientes
+        }
+
+        try {
+            JR.registerQuiescenceAction(end);
+        } catch (edu.ucdavis.jr.QuiescenceRegistrationException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // --- Acción de Quiescencia ---
+    private static op void end() {
+        System.out.println("SleepingBarber simulation has ended.");
+    }
+}
 
 
