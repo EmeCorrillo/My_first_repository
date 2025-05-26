@@ -75,4 +75,79 @@ exercise_18.jr:7: > expected
 Not generating any jrGen files due to errors.
 2 errors
 
+--------------------------------------------------------------------------------
+PERFECT PROGRAM
+
+import edu.ucdavis.jr.JR;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Random;
+
+public class exercise_18 {
+    private static Queue<Integer> products_list = new LinkedList<Integer>();
+    private static int index_list = 50;
+
+    private static process Producer{
+        Random random = new Random();
+
+        for (int i = 1; i <= index_list; i++) {
+            int random_int = random.nextInt(100) + 1;
+            products_list.add(random_int);
+            System.out.println("Producer add in products list... Product [" + random_int + "]");
+        }
+        System.out.println("Producer finished adding " + index_list + " products... ");
+    }
+
+    private static process Consumer{
+        while (!products_list.isEmpty()) {
+            int product = products_list.poll();
+            System.out.println("Consumer remove in products list... Product [" + product +"]");
+        }
+        System.out.println("Consumer finished, final list size: " + products_list.size());
+    }
+
+    public static void main(String[] args) {
+        try {
+			JR.registerQuiescenceAction(end);
+		} catch (edu.ucdavis.jr.QuiescenceRegistrationException e) {
+			e.printStackTrace();
+		}
+    }
+
+    private static op void end(){
+        System.out.println("This is the end...");
+    }
+}
+
+-------------------------------------------------------------------------------------------------
+PROGRAM IN PROGRESS
+
+import edu.ucdavis.jr.JR;
+import java.util.LinkedList;
+
+
+public class exercise_8b{
+    private static Queue<Integer> products_list = new LinkedList<Integer>();
+    private static final int N = 10;
+    private static final int M = 10;
+    private static sem writing = ;
+    private static sem reading = ;
+
+    private static op void pause(int time){
+        
+        try{
+                Thread.sleep(time);
+        }catch(java.lang.Exception e){}
+
+    }
+
+    private static process Writers( (int i = 0; i < N; i++) ){
+
+    }
+
+    private static process Readers( (int j = 0; i < M; j++) ){
+
+    }
+}
+
 
